@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        .alarm{
+            color: red;
+        }
+    </style>
+</head>
+<body>
+
+<h1>请登录</h1>
+<form action="/login/" method="post">
+    <p><input type="text" name="username"></p>
+    <p><input type="password" name="password"></p>
+    <p><input type="submit" value="登录"></p>
+    {% csrf_token %}
+</form>
+
+</body>
+</html>

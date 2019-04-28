@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<ul>
+    {% for item in user_list %}
+        <li>{{ item.name }} {{ item.age }}</li>
+    {% endfor %}
+</ul>
+<div class="pages">
+    <a href="/pages/?p={{ front_page }}">首页</a>
+    <a href="/pages/?p={{ prev_page }}">上一页</a>
+    {% for page in pages_list %}
+        {% if page == current_page %}
+            <span><a href="/pages/?p={{ page }}" style="color: red">{{ page }}</a></span>
+        {% else %}
+            <span><a href="/pages/?p={{ page }}">{{ page }}</a></span>
+        {% endif %}
+
+    {% endfor %}
+    <a href="/pages/?p={{ next_page }}">下一页</a>
+    <a href="/pages/?p={{ tail_page }}">尾页</a>
+</div>
+</body>
+</html>

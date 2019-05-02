@@ -305,66 +305,169 @@ __author__ = 'xzq'
 '''  # models 数据库, 连接mysql
 
 '''
-* ORM:  在models.py中创建表
-        每一张表是一个类class，表的每一个数据是这个类的一个对象obj
-        1. 创建表:
-           class Table(model.Models):
-                 field = model.数据类型
-           
-           1>>. 数据类型:
-                CharField(maxlength=)                         # VARCHAR(max_length)
-                IntegerField()                                # INT
-                FloatField()                                  # DOUBLE      
-                AutoField(primary_key=True)                   # INT PRIMARY KEY AUTO_INCREMENT 
-                BooleanField()                                # TINYINT(1)
+Admin: 数据库管理
+      1. 注册model到admin:  1) admin.site.register(Book)
+                           2) @admin.register(Book)
+      
+      2. admin定制: 1) class myAdmin(admin.ModelAdmin)
+                   2) @admin.register(Book,myAdmin)
+                                           
+'''  # Admin
+
+'''
+Model组件: 
+         (字段)作用: 1. 后端建表
+                    2. 限制并验证admin输入的数据类型 
+         使用:   在models.py中创建表 
+                每一张表是一个类class, 表的每一项数据是这个类的对象obj
+                class Table(model.Models):
+                     field = model.Field     
                 
-                TextField()                                   # LONGTEXT
-                EmailField()                                  # VARCHAR(254)
-                
-                DateField(['Argument'])                       # DATE //YYYY-MM-DD
-                DateTimeField()                               # DATETIME //YYYY-MM-DD HH:MM:SS  
-           
-           2>>. 数据约束:
-                null = False                                  # NOT NULL 
-                default = None                                # DEFAULT
-                primary_key = False                           # PRIMARY KEY
-                unique = True                                 # UNIQUE
-           
-           创建命令:       python manage.py makemigrations     # 创建model迁移文件
-                          python manage.py migrate            # 迁移model至数据库生成具体表  
-        
-        2. 修改表, 重新跑一遍
-        3. 删除表:
-                 1>. 先到数据库把表删掉：drop table 
-                 2>. 注释django中对应的model
-                 3>. 执行以下命令:
-                         python manage.py makemigrations
-                         python manage.py migrate --fake
-                 4>. 写入新的model:
-                 5>. 重新迁移   
-        
-        
-        4. 配置日志文件:
-           /************* settings.py ****************/
-           LOGGING = {
-                'version': 1,
-                'disable_existing_loggers': False,
-                'handlers': {
-                    'console':{
-                        'level':'DEBUG',
-                        'class':'logging.StreamHandler',
-                    },
-                },
-                'loggers': {
-                    'django.db.backends': {
-                        'handlers': ['console'],
-                        'propagate': True,
-                        'level':'DEBUG',
-                    },
-                }
-            }     
-                 
-'''  # ORM, 创建表, 修改表, 删除表, 配置日志文件
+                1. Field类型: 1) 后端数据库有的字段 2) Admin额外提供验证的字段
+                  
+                   字段名                参数                         数据库中存储类型
+                   /*************** 后端数据库有的字段 **************************/
+                   AutoField(Field)     primary_key                 # INT PRIMARY KEY AUTO_INCREMENT
+                   IntegerField(Field)     /                        # INT
+                   BooleanField(Field)     /                        # TINYINT(1)
+                   CharField(Field)      maxlength                  # VARCHAR(max_length)
+                   FloatField(Field)       /                        # DOUBLE
+                   DecimalField(Field)  max_digits(总位数)           # DECIMAL 
+                                        decimal_places(小数位长度)                 
+                   TextField(Field)        /                        # LONGTEXT
+                   DateField(Field)        /                        # DATE // YYYY-MM-DD
+                   DateTimeField(DateField) /                       # DATETIME // YYYY-MM-DD HH:MM:SS 
+                   TimeField(DateField)     /                       # TIME     // HH:MM:SS   
+                   
+                   /**************** Admin额外提供验证的字段 **********************/  
+                   EmailField(CharField)   /                        # VARCHAR
+                   URLField(CharField)     /                        # VARCHAR
+                   IPAddressField(Field)   /                        # CHAR(15)
+                   FileField(Field)       upload_to='地址'           # VARCHAR 
+                   ImageField(FileField)  upload_to='地址'           # VARCHAR
+                                          width_field=None, height_width=None
+                   
+                                       
+'''  # Model组件: 字段
+
+'''
+Model字段参数的作用:
+                  1. 限制约束数据
+                     null = False                         # NOT NULL
+                     default = None                       # DEFAULT = None
+                     primary_key = True                   # PRIMARY KEY
+                     unique = True                        # UNIQUE
+                     db_index = True                      # INDEX
+                  
+                  2. 用于admin显示
+                     verbose_name                         # admin中显示的字段名
+                     help_text                            # admin中显示的帮助信息
+                     choices = [(0,'上海'),(1,'北京'),]    # admin中的选择框
+                     blank                                # admin中是否可为空
+                     editable                             # admin中是否可编辑
+             
+                  3. 错误信息反馈
+                     error_messages = {
+                            '字段参数':'错误反馈',
+                            'invalid': '格式错误',    # 正则校验错误
+                     } 
+                  4. 自定义验证
+                     validators = []
+元信息:
+      class UserInfo(models.Model):
+           nid = models.AutoField(primary_key=True)
+           user = models.CharField(max_length=20)
+           class Meta:
+                 db_table = 'table_name'                # 数据库中的自定义表名字
+                 index_together = [('nid','user')]      # 建立联合索引
+                 unique_together = [('nid','user')]     # 建立联合唯一索引
+                 verbose_name = 'table_name'            # admin中显示的表名字             
+'''  # Model组件: 字段参数, 元信息
+
+'''
+一对多: 多的那方为子表, 设置外键                    
+       fk = models.ForeignKey(                  # django默认创建为 fk_id
+            to='主表名',                         # 可不加to 
+            to_field='主表字段名',                # 默认为主表的主键
+            on_delete='级联方式',                # models.CASCADE       // 父表删除，子表对应删除
+                                                # models.SET_NULL      // 父表删除，子表对应置空，前提是允许置空（默认不允许置空）
+                                                # models.SET_DEFAULT   // 父表删除，子表对应置为默认值，前提是有默认值(default)
+                                                # models.PROTECT       // 子表有数据，父表不允许删除，否则报错  
+            related_name='反向操作的manager'     # 用于代替反向操作的manager, obj.child_set
+            db_constraint = True                # 是否创建约束
+            )
+
+一对一: 一对多 + 唯一索引
+       oto = models.OneToOneField(
+             to = '主表名',                    # 可不加to
+             to_field = '主表字段名',           # 默认为主表的主键
+             on_delete = '级联方式',
+            )
+            
+多对多: 两个一对多
+       1. 自动创建: 可用manager修改数据
+               mtm = models.ManyToManyField(
+                     to = '主表名',
+                     related_name= '反向操作的manager',
+                     db_constraint = True,                 # 是否对第三张表创建约束
+                     db_table = None,                      # 第三张表名 
+                    )       
+       2. 手动创建: 手动修改数据
+               1>. 自定义第三表
+                   class Table_name(models.Model):
+                      u = models.ForeignKey(Table_1)
+                      t = models.ForeignKey(Table_2)
+               2>. mtm = models.ManyToManyField(
+                       to = '主表名',
+                       related_name = '反向操作的manager',
+                       through = '自定义的第三张表',       # 用于指定关系表 
+                       through_fields= ['u','t']         # 用于指定关系表中那些字段做多对多关系表
+                    ) 
+自关联: 
+    1. 多对多:      
+           class User:
+               d = models.ManyToManyField('self',related_name='b')       # 用户互粉
+    2. 一对多:
+               d = models.ForeignKey(User,related_name='b')  # 评论楼                 
+               
+'''  # Model组件: 一对多, 一对一， 多对多
+
+'''           
+1. 创建表:         python manage.py makemigrations     # 创建model迁移文件
+                  python manage.py migrate            # 迁移model至数据库生成具体表  
+
+2. 修改表, 重新跑一遍
+3. 删除表:
+         1>. 先到数据库把表删掉：drop table 
+         2>. 注释django中对应的model
+         3>. 执行以下命令:
+                 python manage.py makemigrations
+                 python manage.py migrate --fake
+         4>. 写入新的model:
+         5>. 重新迁移   
+
+
+4. 配置日志文件:
+   /************* settings.py ****************/
+   LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'handlers': {
+            'console':{
+                'level':'DEBUG',
+                'class':'logging.StreamHandler',
+            },
+        },
+        'loggers': {
+            'django.db.backends': {
+                'handlers': ['console'],
+                'propagate': True,
+                'level':'DEBUG',
+            },
+        }
+    }     
+         
+'''  # Model组件: 创建表, 修改表, 删除表, 配置日志文件
 
 '''
 ORM单表操作:  在views.py里面
@@ -414,22 +517,28 @@ ORM单表操作:  在views.py里面
                 .values(*field)             # SELECT field,field2,..  返回一个ValueQuerySet集合, 且每项是一个{field:value,}字典
                 .values_list(*field)        #                                                    每项是一个(value1,value2,)元组
                 // 去重
-                .distinct()                 # SELECT DISTINCT..       
-                // 去重
-                .order_by(*field)           # .. ORDER BY field1,..   排序升序
-                .order_by(*field).reverse() #                         排序降序
+                    .distinct()                 # SELECT DISTINCT..       
+                // 排序
+                    .order_by(*field)           # .. ORDER BY field1,..   升序
+                    .order_by(-*field)          #                         降序
+                    .order_by(*field).reverse() #                         反转
                 // 聚合
-                from django.db.models import Avg, Min, Max, Sum, Count
-                .aggregate(Avg('field'))  
+                    from django.db.models import Avg, Min, Max, Sum, Count
+                    .aggregate(Avg('field'))  
                 // 分组聚合
-                .values(*field).annotate([my_name]=Avg('field2'))    # SELECT field1, field2, Avg(field) FROM Table GROUP BY field2
+                    .values(*field).annotate([my_name]=Avg('field2'))    # SELECT field1, field2, Avg(field) FROM Table GROUP BY field2
                 
-                其他处理方式: .count(),  .first(), .last()
-                            .exist()   # 若查找存在数据则返回True, 判断数据是否存在可用, 不需要读取全部数据, 不会放入cache
-                
+                其他处理方式: .count()           # 计数 
+                            .first(), .last()  # 取第一个或取最后一个
+                            .exist()           # 若查找存在数据则返回True, 判断数据是否存在可用, 不需要读取全部数据, 不会放入cache
+                            .defer('field')    # 排除某列数据
+                            .only('field')     # 仅取某列数据
+                            .using('defualt1') # 连接不同的数据库
                 当需要对整个field操作时 
-                from django.db.models import F
-                F('field')             # 包装field     
+                    from django.db.models import F
+                    manager.update(num=F('num')+1)  # 包装field, 使其可以被调用
+                
+                
              
              3. 删除记录
                 manager.查.delete()      # 要注意get方法查到的是单条记录, 但都有delete方法
@@ -442,22 +551,28 @@ ORM单表操作:  在views.py里面
                       obj.field = new_value
                       obj.save()                            # 会将全部数据重新写入, 不推荐   
                       
-             ** django orm 直接写sql语句:
-                manager.raw('sql语句')
-                             
+             * 自定义SQL语句
+                1. 完全自定义
+                   from django.db import connection, connections
+                   cursor = connection.cursor()   # cursor = connections('default1').cursor()
+                2. 对当前manager自定义
+                   manager.raw('sql',param=None,translations=None,using=None)
+                       'sql'               # SQL语句
+                       param               # 为该SQL语句传入的参数,避免写死,如raw('select id as nid from userinfo where nid>%s', params=[12,])
+                       translations        # 列名转换, 如 name_map = {'first': 'first_name', 'last': 'last_name'}
+                                                        raw('SELECT * FROM some_other_table', translations=name_map) 
+                       using='default'     # 使用哪个数据库 
+                3. 利用extra函数对当前manager自定义
+                   extra(self, select=None, where=None, params=None, tables=None, order_by=None, select_params=None) 
+                   如 extra(select={'new_id': "select id from tb where id > %s"}, select_params=(1,), order_by=['-nid'])                                      
 '''  # ORM, 单表操作
 
 '''
 ORM多表操作:
+          连表: manager.select_related('fk1',..)    # 一次连表获得所有数据
+               manager.prefetch_related('fk1',..)  # 子查询, 两次查询一次缓存
           1. 一对多
-                1>. 创建表, 多的那方为子表, 设置外键
-                    foreign_key = models.ForeignKey('主表名', on_delete=级联方式)      # django默认创建为 foreign_key_id
-                    * 自动绑定到主表的主键
-                    * 级联方式: models.CASCADE       # 父表删除，子表对应删除
-                               models.SET_NULL      # 父表删除，子表对应置空，前提是运行置空（默认不允许置空）
-                               models.SET_DEFAULT   # 父表删除，子表对应置为默认值，前提是有默认值
-                               models.PROTECT       # 子表有数据，父表不允许删除，否则报错
-                2>. 添加记录
+                1>. 添加记录
                     方式一: 直接指定外键id
                            book_info={
                                 'title':'php',
@@ -476,42 +591,29 @@ ORM多表操作:
                                 'publisher':pub_obj               # 此时外键为'publiser', 按建表时的来，因为相当于是先指定对象，django再转为外键号
                           }
                           
-                3>. 查找记录:
+                2>. 查找记录:
                     方式一: 通过对象(正向)或QuerySet(反向)查找
                            正向查找(子表->主表):  child_obj.foreignkey     # 获得主表对应的对象，通过其属性访问主表信息，相当于子表左连接主表
                            反向查找(主表->子表):  pub_obj.child_set        # 获得子表对应的manager, 可通过后续的查找方法filter,get,all获得子表信息
                                                                          #  这里child是子表的表名  
-                                                pub_obj.sss              # 获得子表对应全部信息， 相当于子表右连接主表  
+                                                
                     方式二: 双下划线连接表
                            正向查找(子表->主表):  Book.objects.filter(publisher__name=value)         # 通过 外键 双下划线连接主表有关的查询条件
                                                 Book.objects.filter().values('publisher__name')    # 通过 外键 双下划线查询主表的信息
                            反向查询(主表->子表):  Publisher.objects.filter(book___name=value)       # 通过 子表表名 双下划线连接子表有关的查询条件
                                                 Publisher.objects.filter().values(book_title)     # 通过 子表表明 双下划线查询子表的信息
                 
-                4>. 删除记录:
+                3>. 删除记录:
                     删除子表记录:
                            manager.查.delete()       # 同单表操作
                     删除主表记录:
                            manager.查.delete()       # 按on_delete操作子表信息                
                 
-                5>. 更新记录:
+                4>. 更新记录:
                     manager.查.update()              # 更新子表, 主表同单表操作
           
           2. 多对多:
-                1>. 多对多关系:
-                      Table_1 <--> Table_1&Table_2 <--> Table_2
-                      * 两张表Table_1, Table_2通过Table_1&Table_2连接
-                      * 其中Table_1, Table_2分别为Tale_1&Table_2的主表
-                      * Table_1 与 Table_1&Table_2 为一对多关系
-                      * Table_2 与 Table_1&Table_2 为一对多关系     
-                2>. 创建多对多关系:
-                     方式一:  通过django自动创建关联表
-                             authors = models.ManyToManyField('Authors')                  
-                     方式二:  自己创建第三张表，并与其他两张表绑定多对一关系
-                             class Book_Author(models.Model):
-                                  author = models.ForeignKey('Author')
-                                  book = models.ForeignKey('Book')
-                3>. 增加记录:
+                1>. 增加记录:
                      通过方式一创建关系: 只能通过其对象的外键属性add方法添加，一次可以添加多个关系
                           book_obj.authors.add(author1,author2)
                           book_obj.authors.add(*QuerySet)
@@ -536,10 +638,8 @@ ORM多表操作:
                                 book_obj.author.remove()    # 清除指定author_id
                       反向删除:  author_obj.book_set.clear()
                                                   .remove()
-                                                  .set([])   # 指定book_id
-                6>. 修改记录:  先删除，再添加
-                              
-                                   
+                                                  
+                6>. 修改记录:  .set([])   # 指定book_id                                                             
 '''  # ORM, 多表操作
 
 '''
@@ -629,31 +729,110 @@ AJAX: (Asynchronous Javascript And XML)
        同步交互：客户端发出一个请求后，需要等待服务器响应结束后，才能发出第二个请求
        异步交互：客户端发出一个请求后，无需等待服务器响应结束，就可以发出第二个请求
        
-       基于jQuery的AJAX实现:
-            $.ajax({
-               url: '/url'
-               type: 'GET/POST',       # POST先注释csrf_token
-               data: {
-                    # 字典                               // 一般可传num, str
-               }
-               traditional:true                         // 可传list, 要传字典转json
-               success: function(arg){                  // 回调函数，服务器返回数据时执行，arg为返回的json字符串
-                     JSON.stringify(dict)                        // 相当于字典转json, json.dumps(dict)
-                     JSON.parse(str)                             // 相当于json转字典, json.loads(str)
-               }
-            })
+       利用AJAX可以做:
+                    1.模态对话框: 1>. 注册验证用户是否存在
+                                 2>. 登录验证用户名密码
+                    2.不刷新页面的情况下，增加，删除，修改数据
+       
+       AJAX的实现:
+           1. 基于jQuery的AJAX实现:
+                $.ajax({
+                   url: '/url',
+                   type: 'GET/POST',       # POST先注释csrf_token
+                   data: {
+                        # 字典                               // 可传num, str
+                   },
+                   contentType:                              // 发送数据的编码格式
+                   traditional:true,                         // 声明后data中可传list, 要传字典转json
+                   timeout:                                  // 等待时间
+                   async:                                    // 是否异步
+                   
+                   beforeSend: function(){}                   // 发送前执行的函数
+                   complete: function(){}                    // 数据接收完全后执行的函数
+                   success: function(arg){                   // 回调函数，服务器返回数据时执行，arg为返回的json字符串
+                         JSON.stringify(dict)                        // 相当于字典转json, json.dumps(dict)
+                         JSON.parse(str)                             // 相当于json转字典, json.loads(str)
+                   },
+                   error: function(){}                       // 失败时执行的函数
+                   
+                   dataType:                                // 将接收到的数据转为指定格式, json,jsonp,text,xml,html,script
+                })
+               
+               $('button').click(function () {             
+                    var data = $('#fm').serialize();                // 相当于submit, 获取form中所有的数据
+                })
+                
+           2. 原生AJAX: var xhr = new XMLHttpRequest()
+              GET:  xhr.open('GET','/url?p=123',[true/false]);    # 创建连接(是否异步)
+                    xhr.onreadystatechange = function(){          # 指定状态改变时，执行的函数
+                        if (xhr.readyState==4){                   # 回调函数，数据全部接收
+                            var arg = xhr.responseText()          # 服务器返回的数据，字符串类型
+                        }
+                    };
+                    xhr.send(null)                                 # 客户端发送数据    
+              
+              
+              POST:  xhr.open('POST','/url');                 # 创建连接
+                     xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset-UTF-8'); # 设置请求头
+                     xhr.onreadystatechange = function(){     # 回调函数
+                        if(xhr.readyState==4){
+                          var arg = xhr.responseText()
+                        }
+                     };
+                     data_json = JSON.stringify(data)
+                     xhr.send(data_json)                      # 发送数据
+
+              其他属性和方法:
+                   客户端状态值: xhr.readyState   0 -- 没有使用open()方法
+                                                1 -- 使用了open(),但还没有send()
+                                                2 -- 已经send()了,但还没有响应
+                                                3 -- 部分接收
+                                                4 -- 完全接收
+                   接收:
+                       响应头:  xhr.getResponseHeader('Content-Type')
+                               xhr.getAllResponseHeader()
+                       响应码:  xhr.states
+                       响应文本: xhr.statesText  
+                   发送:
+                       设置响应头: xhr.setRequestHeader          
+                   
            
-           $('button').click(function () {             
-                var data = $('#fm').serialize();                // 相当于submit, 获取form中所有的数据
-            })
-            
-       新ulr方式:
-           - 页面是独立的
-           - 数据量比较大，操作条目比较多
-       对话框方式:
-           - 数据量小，条目少
-               -增加 location.reload()         
-''' # AJAX
+           3. 伪AJAX: 兼容性最好
+                 iframe标签 + form表单: form提供数据, iframe不刷新提供通道, 返回值在iframe中
+                 <iframe  name='ifra' style='display:none'></iframe>
+                 <form action='/url' method='post' target='ifra'>
+                     <input type='text' name='user'/>
+                     <input type='button' id='btn' value='提交'/>
+                 </form>
+                 
+                 $('#btn').click(function(){
+                     $('name').onload(function(this){                          # 回调函数, 通过iframe拿到返回值
+                        var arg = this.contentWindow.document.body.innerText   # iframe内部也是一个html对象
+                     })
+                 })                                                          
+''' # AJAX: 三种实现方式
+
+'''
+跨域访问: 如http://www.bilibili.com的脚本向http://www.acfun.com发送请求
+浏览器的同源策略: 浏览器不接受跨域XMLHttpRequest的结果, 但发送请求和响应是可以进行的
+AJAX跨域方法:
+        1. JSOP的机制:  1>. 创建script标签, 利用其src属性实现跨域
+                       2>. 其跨域的结果为<script>func(返回值)</script>, 会调用本地规定好的函数, 运行结果
+                       3>. 结束后删除script标签
+                   
+                   使用:
+                         $.ajax({
+                            url: '/url'      // 跨域url
+                            type:'GET',
+                            dataType:'jsonp',           // 声明以下内容以script src=url的方式传递, 因此只能是GET
+                            jsonp:'callback',           // 告诉对方以req.GET.get('callback')获取返回函数名
+                            jsonCallback:'func',        // 以func函数包裹数组
+                         })
+                         function func(arg){            // 定义回调函数
+                           console.log(arg);
+                         }
+        2. CORS(Cross-Origin Resource Sharing): 跨域资源共享，设置特殊的响应头，浏览器不阻止
+''' # AJAX: 跨域
 
 '''
 分页器:  属于控制器, 需要前后端传入数据
@@ -715,7 +894,7 @@ django内置分页器:
 ''' # 分页器
 
 '''
-Form组件:
+Form组件: Form组件是来规定前端用户输入数据的类型，并供视图函数做验证
         作用: 1. 定制生成form表单的HTML标签，限定格式
                 如text, password, checkbox, radio, file(上传文件)   |   select, textarea(文本域)
              2. 验证输入信息是否符合格式
@@ -746,17 +925,18 @@ Form组件:
                           RegexField(CharField):           regex(正则表达式), max_length,min_length
                           ChoiceField(Field):              choices = ((0,'上海'),(1,'北京'),)  # 选择框，也可以用插件定制
             
-''' # Form组件: 定义Form表单
+''' # Form组件: 字段
 
 '''
-Field.attr属性的作用:
+Field字段参数的作用:
           1. 限制数据:   required=True   # 默认不能为空
-                        validators =[]  # 限制规则自定义
-          2. 用于显示:   label           # 输入框名称
-                        help_text       # 帮助信息
                         initial         # 初始值
                         disabled        # 只读
-                        show_hidden_initial
+          
+          2. 用于显示:   label           # 输入框名称
+                        help_text       # 帮助信息      
+                        show_hidden_initial  # ?????????
+                        
           3. html插件: widget = widgets.标签类型
                用于定制html的类型: 输入框(text,password, check, radio)
                                  选择框(select) 
@@ -786,7 +966,7 @@ Field.attr属性的作用:
                     'invalid': '格式错误',    # 正则校验错误
                 }     
                 
-          5. 自定义匹配规则
+          5. 自定义验证: validators = [], 自定义匹配规则
              方式一: 使用django自带的正则匹配器
                     from django.core.validators import RegexValidator
                     ret = re.compile(r'正则表达式')
@@ -798,9 +978,49 @@ Field.attr属性的作用:
                         ret = re.complie(r'正则表达式')
                         if not ret.march(value):
                             raise ValidationError('错误反馈')
-          
-             方式三:                                                               
-'''# Form组件: 属性及插件设置
+                    validators = [vat_01,..]
+             
+             扩展: form.is_valid() -> self.errors -> self.full_clean()
+                   Form组件验证过程: 1. 生成一个空的错误字典self._errors = ErrorDict(); 一个干净数据字典 self.cleaned_data = {}
+                                   2. self._clean_fields()
+                                   3. self._clean_form()
+                                   4. self._post_clean()
+             
+             扩展一: self._clean_fields()
+                    正则表达式验证 +  后端数据验证 (只能对当前字段进行验证)
+                    Form组件的验证过程:  1. 逐一判断field正则表达式
+                                       2. 成功 self.cleaned_data['field_name'] = value
+                                       3. if hasattr(self,'clean_%' % field_name):
+                                               value = getattr(self,'clean_%' % name)()
+                                               self.cleaned_data[field_name] = value
+                    class MyForm():
+                         user = ...
+                         def clean_user(self):
+                             if models.User.objects.filter(name=user).count():     # 后端验证
+                                raise ValidationError('用户名已存在')                # 有错则抛出异常
+                             return self.cleaned_data['user']                      # 返回值固定
+             
+             扩展二: self._clean_form
+                    在self._clean_fields()之后，进行联合验证
+                    self._clean_form执行过程: 1. cleaned_data = self.clean()
+                                             2. self.cleaned_data = cleaned_data
+                    在 self.clean()中可进行联合验证
+                       def clean(self):
+                           value_dict = self.cleaned_data                         # 获取已校验的数据
+                           v1 = value_dict.get('user')
+                           v2 = value_dict.get('id')
+                           if v1 == 'root' and v2 == 1:                           # 进行联合验证
+                              raise.ValidationError('联合验证失败')                 # 有错则抛出异常
+                           return self.cleaned_data                               # 返回值固定     
+                    /***** 前端 ****/
+                    form.errors = {
+                           '__all__': '整体错误'
+                           'users': users字段的错误
+                    }
+                    form.errors.__all__   
+             
+             扩展三: self._post_clean()全局扩展钩子                                                                                                                                     
+'''# Form组件: 字段参数
 
 '''
 2. 视图处理渲染:
@@ -825,5 +1045,95 @@ Field.attr属性的作用:
                    else:
                        errors = form.errors         # 获取错误信息
             2. 传入模板渲染
-                {{ form.field_name.errors }}                                                      
+                {{ form.field_name.errors }}       
+                
+                
+     3>. AJAX的信息验证:
+            Form表单: 有错直接render重新渲染 错误信息
+            AJAX: 页面不会主动跳转(redirect也不会跳转), 用JS渲染错误信息
+                  1. 后端序列化错误信息
+                     data = {'messages':form.errors}
+                     return json.dumps(data)          # 本来json只能序列化基本数据类型，但errors是ErrorDict(dict)的对象，可序列化
+                  2. 前端得到信息后，js操作动态显示
+            注意: errors = form.errors 默认为 <ul>标签
+                 可转化为:  errors.as_ul()
+                           errors.as_json()
+                           errors.as_data()                                                             
 ''' # Form组件: 视图函数处理
+
+'''
+Django序列化: 生成能够保存, 传输的数据(如字符串，二进制编码)，叫序列化
+             web中后端向前端传输数据: 1. return render(req,'template.html')  # 后端处理，然后把数据整个传给前端渲染
+                                   2. ajax + 序列化(json) + js 前端渲染
+             能json序列化的数据类型: list, tuple, dict
+             
+             AJAX中的数据序列化:  
+                   1. QuerySet, 后端直接向前端传输obj对象: 
+                      两次序列化: 1. obj对象序列化, 存入字典
+                                2. 字典序列化为json
+                   /***** 后端 *****/ 
+                      from django.core import serializers
+                      users = UserInfo.objects.all()                        # QuerySet, 内部为对象
+                      users_json = serializers.serialize('json',users)      # 只能序列化对象
+                      message = {'data':users_json}
+                      message_json = json.dumps(message)                    # 序列化字典
+                      return HTTPResponse(message_json)
+                   /**** 前端 ****/
+                       $.ajax({
+                         ...
+                         dataType: 'JSON',                                      # 解字典序列化 
+                         success:function(arg){
+                             users = JSON.parse(arg.data)                       # 解对象序列化
+                         }
+                       }) 
+                   
+                   2. ValueQuerySet, 后端向前端传输处理好的数据
+                      ValueQuerySet: 内部为字典  .values('username','id')           
+                                     内部为元组  .values_list('username','id')
+                      序列化:  1. ValueQuerySet转list
+                              2. 序列化字典
+                      /***** 后端 *****/
+                      users = UserInfo.objects.all().values('id','username')    #  ValueQuerySet: 内部字典
+                      message = {'data':list(users)}                            #  转list
+                      return HTTPResponse(json.dumps(message))                  #  字典序列化                                                
+''' # Django序列化
+
+'''
+文件上传:  1. form表单上传:  <form enctype='mulitpart/form-data'>
+             1>. 直接通过file输入框上传
+                 前端: <input type='file' name='img'>
+                 后端: img = req.FILES.get('img')     # 文件对象(文件名称，文件大小，文件内容)
+                      file_name = img.name
+                      file_size = img.size
+                      for line in img.chunks():      # img.chunks()为文件内容迭代器 
+                           # 保存
+             
+             1+>.制作上传按钮:
+                 <div style='position:relative'>
+                     <input type='button' value='上传'>
+                     <input type='file' name='img' style='opacity:0; position:absolute; top:0;left:0'>
+                 </div>
+                                  
+             2>. Form组件上传
+                 /* myFom.py */
+                 img = fields.FileField()
+                 /* views.py */
+                 form = myForm(req.Files)
+                 if form.is_valid():
+                    img = form.cleaned_data['img']
+                    # 后面保存数据同1>      
+          
+          2. AJAX上传:
+             1>. jQuery, 原生xhr: 用FormData对象来封装文件数据
+                 前端: var fileobj = $('#img').files[0];
+                      var formdata = new FormData();
+                      formdata.append('file',fileobj);           # 文件对象封装到formdata
+                      $.ajax({
+                       data: form,
+                       processData:false,   // 告诉jQuery不要处理数据
+                       contentType:false,   // 告诉jQuery不要设置文件格式
+                      })
+                 后端: fileobj = req.FILES.get('file')
+                      同上     
+             2. iframe + form: 同form表单上传
+''' # 文件上传

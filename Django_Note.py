@@ -684,6 +684,7 @@ Session: 仅在返回给客户端的Cookie上存储sessionid（字符串），�
 
 '''
 请求生命周期: 1.客户端发送HTTP请求
+            *. 中间件
             2. 服务器的url管理系统根据其url匹配
             3. 匹配成功则执行ViewFunction:  1. FBV:  url --> 函数
                                           2. CBV:  url --> 类 --> 获取请求的方法post/get --> 执行相应的函数
@@ -1137,3 +1138,71 @@ Django序列化: 生成能够保存, 传输的数据(如字符串，二进制编
                       同上     
              2. iframe + form: 同form表单上传
 ''' # 文件上传
+
+'''
+中间件: 1. 位于request和response之间的一道处理过程, 从全局上改变django的输入输出
+       2. 中间件是一些类, 客户端request和服务器response经过中间件时, 会执行相应的类方法
+       3. 中间件的类方法有:
+                        process_request(request): pass
+                        process_view(request,callback,callback_args,callback_kwargs):pass
+                        process_exception(request,exception):
+                        process_response(request,response): return response
+       **中间件的执行流程:
+              1>. 整体从上到下依次执行
+              2>. url请求-->中间件1的process_request -->中间件2的process_request --> url路由控制 --> 中间1的process_view <-- 中间2的process_view
+                    ^                                                                                                            |
+                    |<-- 中间件1的process_response<-- 中间2的process_response <---------------------------------------- 视图函数 <--|
+                                                                                  ^                                              |
+                                                                                  |                                 视图函数出错   | 
+                                                                         中间1的process_exception <-- 中间2的process_exception <-- | 
+
+              3>. 对于一个中间件而言, 在process_request时中断返回HTTPResponse, 将直接跳过所有中间过程, 到其process_response 
+                                   在process_view时中断, 将直接跳过所有中间过程, 但所有的process_response都会执行
+                                   
+              4>. process_view可以调用视图函数: callback(request,*callback_args,**callback_kwargs) 
+              
+       
+       使用: 1. settings.py 中注册
+               MIDDLEWARE = [
+                    'MyMidddleware.Md1',
+                    'MyMidddleware.Md2',
+               ]   
+            2. 继承MiddlewareMixin, 定义相应类方法 
+               from django.utils.deprecation import MiddlewareMixin     
+               class  Md1(MiddlewareMixin):
+                   def process_request(self,request): pass       
+''' # 中间件
+
+'''
+注册: from django.contrib.auth.models import User
+     1. 获取用户名, 密码等注册信息
+     2. 判断用户名是否存在: if User.objects.filter(username=username)
+     3. 不存在则创建新用户: new_user = User.objects.create_user(username=username,password=password,**kwargs)
+                         new_user.save()  
+
+登录: from django.contrib.auth import authenticate, login
+     1. 获取用户名和密码
+     2. 认证: user = authenticate(username=username,password=password)
+     3. 认证成功则登录:  if user is Not None: login(request,user)
+     
+需要登录验证的操作: from django.contrib.auth,decorators import login_required
+                 @login_required
+                 def my_view(req): pass
+     执行过程为:
+              1. url --> my_view
+              2. 判断是否登录: if not request.user.is_authenticated()    
+              3. 没有登录则重定向到settings.LOGIN_URL登录页面
+              4. 登录成功后重定向到req.path当前路径
+
+修改密码:
+        1. 获取旧密码
+        2. 验证是否正确: if req.user.check_password(old_password):
+        3. 正确则修改: user = User.objects.filter(username=username).first()
+                      user.set_password(password=new_password)
+                      user.save()
+                      
+注销: from django.contrib.auth import logout
+      def logout_view(req):
+         logout(req)
+         # 成功页面                                                     
+''' # Auth组件: 注册, 登录, 修改密码, 注销

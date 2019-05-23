@@ -7,6 +7,7 @@ class Book(models.Model):
     publish_date = models.DateField()
     publisher = models.ForeignKey("Publisher",on_delete=models.CASCADE,related_name='books')
     author = models.ManyToManyField('Author')
+    fk = models.OneToOneField
     def __str__(self):
         return self.title
 
@@ -23,5 +24,9 @@ class Author(models.Model):
     def __str__(self):
         return self.name
 
+
+class Test(models.Model):
+    img = models.ImageField(upload_to='blog/static/')
+    title = models.CharField(max_length=20)
 
 

@@ -13,7 +13,7 @@ __author__ = 'xzq'
                        |--- migrations      # 迁移
                        |--- static          # 静态文件(js,css,img)
                        |--- admin.py        # 数据库管理
-                       |--- apps.py         #
+                       |--- apps.py         # 用于向settings.py中注册app
                        |--- models.py       # 连接数据库, 操作数据
                        |--- test.py
                        |--- views.py        # 视图函数
@@ -27,6 +27,7 @@ __author__ = 'xzq'
           2>. python manage.py runserver  ip:port   # 运行项目
           3>. python manage.py makemigrations       # 生成数据库表单文件
           4>. python manage.py migrate              # 创建数据库表单
+          5>  python manange.py shell               # 进入该django项目的环境
 '''  # Django项目框架
 
 '''
@@ -95,7 +96,11 @@ __author__ = 'xzq'
                    2>>. 通过模板动态调用
                         <form action="{% url 'reg' %}" method="post">
                    3>>. 模板中传参
-                         {% url 'reg' param1 param2 %}                 # 此时是无名分组传参，要命名在url系统中命名
+                         {% url 'reg' param1 param2 %}                 # 无名分组传参 r'^all/(\d+)'
+                         {% url 'reg' name=para1 %}                    # 有命名分组传参 r'^all/(?<name>\d+)'
+                   4>>. 在view中传参
+                         reverse('reg',args=(1,))                      # 无命名分组
+                         reverse('reg',kwargs={'name':1})              # 有命名分组       
                    
            urls分流:  
                1>. DjangoWeb项目urls.py中为主系统
@@ -113,6 +118,9 @@ __author__ = 'xzq'
                
                # 浏览器访问时:
                   # http://127.0.0.1:8080/blog/register/
+           
+           分类: url
+           分页: 分页器                       
 '''  # url系统
 
 '''
@@ -144,6 +152,7 @@ __author__ = 'xzq'
                           # return  render_to_response('模板.html', context_dir, context_instance=RequestContext(req))
                       2>>. 页面跳转:
                           return redirect('url')      # 如果要传参通过url/?message=%s 传参给另一个视图函数
+                                                      # /app01/url   django会退回到根地址'127.0.0.1:8080' 
                           
                           ret = redirect('url')       # 也可以通过cookie
                           ret.set_cookie(键，值)       
@@ -174,7 +183,7 @@ __author__ = 'xzq'
        3. Template过滤器:
           1>. Template中定义过滤器:  {{obj|filter[:param]}}
           2>. filter类型:   add: num                # 给变量加上相应的值
-                           cut: 'str'              # 移除变量中的指定字符
+                           cut: 'str'              # 移除变量中的指定字符, 会移除所有(跟python中strip不同)
                            date: 'Y-m-d-H-M-S'     # 指定日期格式 %Y年 %m月 %d日 %X时间(%H时 %M分 %S秒) %a星期
                            default: 0              # 变量为False, 指定默认值
                            default_if_none: 0      # 变量为None, 指定默认值
@@ -244,12 +253,12 @@ __author__ = 'xzq'
                                   @register.simple_tag
                                   def my_input(id,arg):
                                         result = "<input type='text' id='%s' class='%s' />" %(id,arg,)
-                                        return mark_safe(result)                  # 相当于filter中的 safe 声明 
+                                        return mark_safe(result)                  # tag中只能这样用, 相当于filter中的 safe 声明 
                                         
                                    /************template***************/
                                   {% load myTag %}                       #  加载自定义标签库
-                                  {% my_input %}
-                                  {% simple_tag_multi %}
+                                  {% my_input id arg%}
+                                  {% simple_tag_multi v1 v2%}
 
 *2. 模板继承:
            /**********父类模板中********/
@@ -267,7 +276,7 @@ __author__ = 'xzq'
               
 *3. 模板包含:
            {% include %} 允许在模版中包含其他模版的内容
-           {% include 'include/nav.html'%}       # 这里'nav.html'是写好的模板块文件              
+           {% include 'include/nav.html'%}       # 这里'nav.html'是写好的模板块文件, 可以不是完整的html文件              
 '''  # 模板，自定义filter和tag, 模板继承
 
 '''
@@ -306,6 +315,9 @@ __author__ = 'xzq'
 
 '''
 Admin: 数据库管理
+       LANGUAGE_CODE = 'en-us'  #LANGUAGE_CODE = 'zh-hans'          // 配置中文界面
+       python manage.py create superuser                            // 注册管理员
+       
       1. 注册model到admin:  1) admin.site.register(Book)
                            2) @admin.register(Book)
       
@@ -340,11 +352,11 @@ Model组件:
                    TimeField(DateField)     /                       # TIME     // HH:MM:SS   
                    
                    /**************** Admin额外提供验证的字段 **********************/  
-                   EmailField(CharField)   /                        # VARCHAR
-                   URLField(CharField)     /                        # VARCHAR
-                   IPAddressField(Field)   /                        # CHAR(15)
-                   FileField(Field)       upload_to='地址'           # VARCHAR 
-                   ImageField(FileField)  upload_to='地址'           # VARCHAR
+                   EmailField(CharField)   /                                  # VARCHAR
+                   URLField(CharField)     /                                  # VARCHAR
+                   IPAddressField(Field)   /                                  # CHAR(15)
+                   FileField(Field)       upload_to='地址'                     # VARCHAR    //文件存在本地内存, 信息存在数据库
+                   ImageField(FileField)  upload_to='相对根地址的路径'           # VARCHAR
                                           width_field=None, height_width=None
                    
                                        
@@ -466,7 +478,13 @@ Model字段参数的作用:
             },
         }
     }     
-         
+
+5. 根据数据库中的表生成model中类
+    1、修改seting文件，在setting里面设置要连接的数据库类型和名称、地址
+    2、运行下面代码可以自动生成models模型文件
+           - python manage.py inspectdb
+    3、创建一个app执行下下面代码：
+           - python manage.py inspectdb > app/models.py          
 '''  # Model组件: 创建表, 修改表, 删除表, 配置日志文件
 
 '''
@@ -709,19 +727,50 @@ Session: 仅在返回给客户端的Cookie上存储sessionid（字符串），�
                                      response = HTTPResponse('响应体')
                                      response['key'] = 'value'              # 响应头
                                      response.set_cookie('key','value')     # 响应体
-                                     return response                        
+                                     return response                                             
+'''  # 请求声明周期
 
-
+'''
 搭建工作环境的流程:
                  1. 创建project
-                 2. 创建app                           # python manage.py startapp app_name
-                 3. 在settings.py中注册app             # app.apps.AppConfig
+                 
+                 2. 创建app                           
+                    python manage.py startapp app01
+                 
+                 3. 在settings.py中注册app             
+                    app01.apps.AppConfig
+                 
                  4. 配置静态变量环境
+                    #1 在app01中创建静态文件夹: 
+                       static
+                          - css
+                          - js
+                          - plugins
+                    #2 在settings.py中配置环境变量
+                       STATICFILE_DIR = (
+                           os.path.join(BASE_DIR,'app01/static'),
+                       )                        
+                 
                  5. url分管
+                    /*** Django.urls.py ***/
+                    urlpatterns = [
+                       path('app01/',include('app01.urls'))
+                    ]
+                    /*** app01.urls.py ***/
+                    from django.conf.urls import url
+                    from app01.views import *
+                    urlpatterns = [
+                       url(r'',)
+                    ]
+                 
                  6. 视图函数分管
-                 5. 连接mysql  
-                 6. 配置mysql日志文件                         
-'''  # 请求声明周期, 搭建环境的流程
+                    删掉原来的views.py, 创建views.py文件在其内部分别不同板块的视图函数
+                 
+                 5. 连接mysql
+                      
+                 
+                 6. 配置mysql日志文件    
+'''  # 搭建开发环境流程
 
 '''
 AJAX: (Asynchronous Javascript And XML)
@@ -817,7 +866,7 @@ AJAX: (Asynchronous Javascript And XML)
 跨域访问: 如http://www.bilibili.com的脚本向http://www.acfun.com发送请求
 浏览器的同源策略: 浏览器不接受跨域XMLHttpRequest的结果, 但发送请求和响应是可以进行的
 AJAX跨域方法:
-        1. JSOP的机制:  1>. 创建script标签, 利用其src属性实现跨域
+        1. JSONP的机制:  1>. 创建script标签, 利用其src属性实现跨域
                        2>. 其跨域的结果为<script>func(返回值)</script>, 会调用本地规定好的函数, 运行结果
                        3>. 结束后删除script标签
                    
@@ -960,12 +1009,26 @@ Field字段参数的作用:
                             def __init__(self,*arg,**kwargs):
                                 super(MyForm,self).__init__(*args,**kwargs)
                                 self.fields['field_name'].widget.choices = model.Table.all().value_list('id','name') 
+                        
+                        2>  改写model.py中的__str__方法
+                            from django.forms import model
+                            authors = model.ModelMultipleChoiceField(queryset=models.Table.objects.all())   //多选
+                            authors = model.ModelChoiceField(queryset=models.Table.objects.all())           //单选
                                 
           4. 错误反馈:
                 error_messages = {
                     'attr':'错误反馈',
                     'invalid': '格式错误',    # 正则校验错误
-                }     
+                } 
+                e.g.
+                name = fields.CharField(
+                    max_length=20,
+                    widget=wid_01,
+                    error_messages={
+                        'required':'用户名不能为空',
+                        'max_length':'用户名过长'
+                    }
+                )   
                 
           5. 自定义验证: validators = [], 自定义匹配规则
              方式一: 使用django自带的正则匹配器
@@ -1018,7 +1081,7 @@ Field字段参数的作用:
                            '__all__': '整体错误'
                            'users': users字段的错误
                     }
-                    form.errors.__all__   
+                    form.no_field_errors
              
              扩展三: self._post_clean()全局扩展钩子                                                                                                                                     
 '''# Form组件: 字段参数
@@ -1149,7 +1212,7 @@ Django序列化: 生成能够保存, 传输的数据(如字符串，二进制编
                         process_response(request,response): return response
        **中间件的执行流程:
               1>. 整体从上到下依次执行
-              2>. url请求-->中间件1的process_request -->中间件2的process_request --> url路由控制 --> 中间1的process_view <-- 中间2的process_view
+              2>. url请求-->中间件1的process_request -->中间件2的process_request --> url路由控制 --> 中间1的process_view --> 中间2的process_view
                     ^                                                                                                            |
                     |<-- 中间件1的process_response<-- 中间2的process_response <---------------------------------------- 视图函数 <--|
                                                                                   ^                                              |

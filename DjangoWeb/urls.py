@@ -32,4 +32,7 @@ urlpatterns = [
 
     url(r'^form_part/',views.form_part),
 
+    url(r'^middleware/',views.middleware),
+
+    url(r'^sign_up',views.sign_up)
 ]

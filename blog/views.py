@@ -151,7 +151,7 @@ def django_pages_plus(req):
     return HttpResponse('ok')
 
 '''
-
+Form组件
 '''
 from blog.MyForm import MyForm
 def form_part(req):
@@ -166,4 +166,34 @@ def form_part(req):
             print(form.cleaned_data)
             print(form.errors)
     return HttpResponse('ok')
+
+
+'''
+中间件
+'''
+def middleware(req):
+    print('View函数')
+    return HttpResponse('ok')
+
+
+'''
+Auth组件
+'''
+from django.contrib.auth.models import User
+def sign_up(req):
+    state = None
+    if req.method == 'POST':
+        password = req.POST.get('password',None)
+        username = req.POST.get('username')
+        print(password,username)
+        if User.objects.filter(username=username):
+            state = 'user_exist'
+        else:
+            new_user = User.objects.create_user(username=username,password=password)
+            new_user.save()
+            print(new_user.is_active)
+            return HttpResponse('注册成功')
+        return HttpResponse('注册失败, %s' % state)
+    return render(req,'sign_up.html')
+    
 

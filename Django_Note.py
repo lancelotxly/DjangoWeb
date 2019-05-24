@@ -1203,7 +1203,7 @@ Django序列化: 生成能够保存, 传输的数据(如字符串，二进制编
 ''' # 文件上传
 
 '''
-中间件: 1. 位于request和response之间的一道处理过程, 从全局上改变django的输入输出
+中间件: 1. 位于Request和Response之间的一道处理过程, 从全局上改变django的输入输出
        2. 中间件是一些类, 客户端request和服务器response经过中间件时, 会执行相应的类方法
        3. 中间件的类方法有:
                         process_request(request): pass
